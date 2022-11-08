@@ -6,7 +6,7 @@ from tqdm import tqdm
 class Neuron():
     """
     Core Neuron class based on swc file format
-
+    
     Attributes
     ----------
 

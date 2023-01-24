@@ -6,7 +6,7 @@ from tqdm import tqdm
 class Neuron():
     """
     Core Neuron class based on swc file format
-    
+
     Attributes
     ----------
 
@@ -52,14 +52,29 @@ class Neuron():
     count_ends:
             Returns the number of end nodes (leaves) in the neuron
 
+    get_end_nodes: 
+            Returns the node ids of end nodes
+
     count_branches:
             Returns the number of branch nodes in the neuron
+
+    get_branch_nodes:
+            Returns the node ids of branch nodes
 
     count_segments:
             Returns the number of segments which make up the neuron
     
     total_cable_length:
             Returns the total cable length of the neuron
+
+    get_root_id:
+            Returns the node ID of the root node
+    
+    get_root:
+            Returns a pd.Series with information on the root node
+
+    get_node(node_id):
+            Returns a pd.Series with information on the given node_id, if it is present within the Neuron. Raises error otherwise.
 
 
     """
@@ -162,6 +177,15 @@ class Neuron():
         self    :   Neu_Trees.Neuron
                 Appends column to the Neuron node table with the distances. Updates neuron's labels to include distances. Adds total cable length to neuron summary.
         """
+
+        if 'distances' in self.labels:
+
+            if 'Cable_Length' not in self.summary.index:
+                dist_ind = self.labels.index('distances')
+                dist = np.sum(self.node_table[:,dist_ind])
+                self.summary['Cable_Length'] = dist
+            return
+
         # add distances to node table
 
         dists = []
@@ -205,12 +229,26 @@ class Neuron():
         Returns the number of branch point in the neuron
         """
         return len(np.where(self.node_table[:,self.labels.index('label')] == 5)[0])
+
+    def get_branch_nodes(self):
+        """
+        Returns the node ids of branch nodes
+        """
+        branches = np.where(self.node_table[:,self.labels.index('label')] == 5)[0]
+        return self.node_table[branches,self.labels.index('node_id')]
     
     def count_ends(self):
         """
         Returns the number of end (leaf) nodes in the neuron
         """
         return len(np.where(self.node_table[:,self.labels.index('label')] == 6)[0])
+
+    def get_end_nodes(self):
+        """
+        Returns the node ids of end nodes
+        """
+        ends = np.where(self.node_table[:,self.labels.index('label')] == 6)[0]
+        return self.node_table[ends,self.labels.index('node_id')]
     
     def count_segments(self):
         """
@@ -227,9 +265,76 @@ class Neuron():
 
         return np.sum(self.node_table[:,7])
 
+    def get_root_id(self):
+        """
+        Returns the node_id of the root node
+        """
+        root = np.where(self.node_table[:,self.labels.index('label')] == -1)[0]
+        return self.node_table[root,self.labels.index('node_id')][0]
+    
+    def get_root(self):
+        """
+        Returns information on the root node of the Neuron
+
+        Returns
+        -------
+
+        root:   pd.Series
+            Information on Neurons root node
+        """
+        root = np.where(self.node_table[:,self.labels.index('label')] == -1)[0]
+        df = pd.Series(self.node_table[root,:][0],index = self.labels)
+        return df
+    
+    def get_node(self,node):
+        """
+        Returns information on a specific node if it exists within the node_table
+
+        Parameters
+        ----------
+
+        node:   int | flt
+            Node id of node you wish to get information on.
+
+        Returns
+        -------
+
+        node_info:  pd.Series
+            Information for the provided node in the Neuron
+
+        Raises
+        ------
+
+        ValueError: 
+            If the provided node id is not in the Neuron
+
+        """
+        node_ind = self.labels.index('node_id')
+
+        if node in self.node_table[:,node_ind]:
+            ind = np.where(self.node_table[:,node_ind] == node)[0][0]
+            df = pd.Series(self.node_table[ind,:],index = self.labels)
+            return df
+        else:
+            raise ValueError('Given node id not in Neuron')
 
 
-class NeuronList():
+    def write_swc(self,fname):
+        """
+        Saves Neuron to .swc file format. Column labels (Neuron.labels) is saved in the header
+        Parameters
+        ----------
+
+        fname:  str
+            file path/ file name to save to
+
+        """
+        np.savetxt(fname,self.node_table,
+            header = 'SWC Generated using Neu_Trees \n Columns \n' + str(self.labels))
+
+
+
+class Neuron_List():
     """
     List object for lists of neurons
 
@@ -351,7 +456,7 @@ def read_Neuron(path):
                     N = _read_swc(os.path.join(root,file))
                     N_all.append(N)
 
-        return NeuronList(N_all)
+        return Neuron_List(N_all)
 
     else:
         raise TypeError('input is not a file or directory')
@@ -379,10 +484,14 @@ def _read_swc(file):
 
     # read data and make sure it has 7 columns
     data = np.loadtxt(file)
-    assert data.shape[1] == 7, "Expected 7 data columns, got " + str(data.shape[1])
 
-    # get labels (as default swc format)
-    labels = ['node_id','label','x','y','z','radius','parent_id']
+    if data.shape[1] == 7:
+        # get labels (as default swc format)
+        labels = ['node_id','label','x','y','z','radius','parent_id']
+    elif data.shape[1] == 8:
+        labels = ['node_id','label','x','y','z','radius','parent_id','distances']
+    else:
+        raise ValueError("Expected 7 data columns, got " + str(data.shape[1]))
 
     return Neuron(data, labels, name)
 

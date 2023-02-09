@@ -318,6 +318,17 @@ class Neuron():
         else:
             raise ValueError('Given node id not in Neuron')
 
+    def get_coords(self):
+        """
+        Get the x/y/z coordinates of nodes within the Neuron
+        """
+        x_ind = self.labels.index('x')
+        y_ind = self.labels.index('y')
+        z_ind = self.labels.index('z')
+
+        return self.node_table[:,[x_ind,y_ind,z_ind]]
+
+
 
     def write_swc(self,fname):
         """

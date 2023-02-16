@@ -308,3 +308,43 @@ def k_compartments(N,k = 2,outlier_detection = False):
 
     return Neuron_List(Neurons)
 
+
+def center_rotate(N_all):
+    """
+    
+    """
+    coords=np.vstack([n.get_coords() for n in N_all.neurons])
+
+    # lets create an array off coords with the neuron names each point belong to do 
+    l = [[n.name] * n.count_nodes() for n in N_all.neurons]
+    names = np.array([item for sublist in l for item in sublist])
+    original_data = np.c_[names,coords]
+
+    # transpose coords
+    coords = coords.T
+
+    # center
+    for i in range(coords.shape[0]):
+            coords[i] -= np.mean(coords[i])
+
+    r_coords = snap_to_axis(coords)
+
+    # transpose r_coords
+    r_coords = r_coords.T
+
+    # overwrite the original data with the new coordinates
+    original_data[:,1:4] = r_coords
+
+    # update coordinates in Neurons with new data
+
+    x_ind = N_all.neurons[0].labels.index('x')
+    y_ind = N_all.neurons[0].labels.index('y')
+    z_ind = N_all.neurons[0].labels.index('z')
+
+    for i in range(len(N_all.neurons)):
+        n = N_all.neurons[i]
+        current = original_data[np.where(original_data[:,0]==n.name)[0],1:4]
+        n.node_table[:,[x_ind,y_ind,z_ind]] = current
+        N_all.neurons[i] = n
+
+    return N_all

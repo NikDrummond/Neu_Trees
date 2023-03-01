@@ -179,7 +179,7 @@ def GHT(n, x, nu=None, tau=0.1, kappa=0.1, omega=0.5):
         (w1+kappa*(1-omega))*np.log(w1)
     return argmax(x, f0+f1), f0+f1
 
-def edf(data, alpha=.05, x0=None, x1=None ):
+def edf(data, alpha=.05, x0=None, x1=None , bins = 100):
     """
     Calculate the empirical distribution function and confidence intervals around it.
 
@@ -207,7 +207,7 @@ def edf(data, alpha=.05, x0=None, x1=None ):
 
     x0 = data.min() if x0 is None else x0
     x1 = data.max() if x1 is None else x1
-    x = np.linspace(x0, x1, 100)
+    x = np.linspace(x0, x1, bins)
     N = data.size
     y = np.zeros_like(x)
     l = np.zeros_like(x)
@@ -484,3 +484,51 @@ def snap_to_axis(coords, error_tol = 0.0000001, return_theta = False):
     else:
         return r_coords, [theta1,theta2,theta3]
 
+def scale(x, rmin, rmax, tmin, tmax):
+    """
+    linearly scale x to the interval between tmin and tmax
+
+    Parameters
+    ----------
+    x:      float | int | list | np.array
+        single value, or set of values you wish to scale to given interval
+    
+    rmin:   int | float
+        minimum value in observed range
+
+    rmax:   int | float
+        max value in observed range
+
+    tmin:   int | float
+        minimum of range for x to be scaled to
+
+    tmax:   int | float
+        maximum of range for x to be scaled to
+
+
+    Returns
+    -------
+    scaled_x:   float | int | list | np.array
+        x, linearly scaled between tmin and tmax. returned in the same object type as x
+
+    """
+    if min == None:
+        rmin = np.min(x)
+    else:
+        rmin = rmin
+    if max == None:
+        rmax = np.max(x)
+    else:
+        rmax = rmax
+
+    convert = False
+    if isinstance(x,list):
+        convert = True
+        x = np.array(x)
+
+    scaled = ((x - rmin)/(rmax-rmin)) * (tmax - tmin) + tmin
+
+    if convert == True:
+        scaled = list(scaled)
+
+    return scaled

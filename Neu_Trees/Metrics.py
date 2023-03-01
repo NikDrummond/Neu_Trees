@@ -309,42 +309,110 @@ def k_compartments(N,k = 2,outlier_detection = False):
     return Neuron_List(Neurons)
 
 
-def center_rotate(N_all):
+
+def Eig_align(N,population = False, keep_center = False):
+    """
+    """            
+    # if neuron list
+    if isinstance(N, Neuron_List):
+
+        # coordinate indicies
+        x_ind = N.neurons[0].labels.index('x')
+        y_ind = N.neurons[0].labels.index('y')
+        z_ind = N.neurons[0].labels.index('z')
+        # if we are rotating globaly
+        if population == True:
+
+            # get all coords
+            coords=np.vstack([n.get_coords() for n in N.neurons])
+            # lets create an array off coords with the neuron names each point belong to do 
+            l = [[n.name] * n.count_nodes() for n in N.neurons]
+            names = np.array([item for sublist in l for item in sublist])
+            original_data = np.c_[names,coords]
+            # transpose coords
+            coords = coords.T
+            # center
+            if keep_center == False:
+                 # make a note of the centering adjustment
+                 centers = np.mean(coords)
+            for i in range(coords.shape[0]):
+                    coords[i] -= np.mean(coords[i])
+            r_coords = snap_to_axis(coords)
+
+            if keep_center == False:
+                 for i in range(coords.shape[0]):
+                      r_coords[i] += centers[i]
+            
+            # transpose r_coords
+            r_coords = r_coords.T
+            # overwrite the original data with the new coordinates
+            original_data[:,1:4] = r_coords
+            # update coordinates in Neurons with new data
+
+            for i in range(len(N.neurons)):
+                n = N.neurons[i]
+                current = original_data[np.where(original_data[:,0]==n.name)[0],1:4]
+                n.node_table[:,[x_ind,y_ind,z_ind]] = current
+                N.neurons[i] = n
+
+        # if we are rotating each individual Neuron
+        else:
+             for n in range(len(N.neurons)):
+                n = N.neurons[i]
+                # get coords
+                coords = n.get_coords().T
+                # center - note keep center
+                if keep_center == False:
+                    centers = np.mean(coords)
+                for i in range(coords.shape[0]):
+                     coords[i] -= np.mean(coords[i])
+                # rotate
+                r_coords = snap_to_axis(coords)
+                # undo centering if we need to 
+                if keep_center == False:
+                     for i in range(coords.shape[0]):
+                          r_coords[i] += centers[i]
+                # update coordinates
+                n.node_table[:,[x_ind,y_ind,z_ind]] = r_coords.T
+                N.neurons[i] = n
+    elif isinstance(N, Neuron):
+        # inds
+        x_ind = N.labels.index('x')
+        y_ind = N.labels.index('y')
+        z_ind = N.labels.index('z')
+        #  get coords
+        coords = N.get_coords().T
+        # center - note keep center
+        if keep_center == False:
+            centers = np.mean(coords)
+        for i in range(coords.shape[0]):
+            coords[i] -= np.mean(coords[i])
+        # rotate
+        r_coords = snap_to_axis(coords)
+        # undo centering if we need to 
+        if keep_center == False:
+            for i in range(coords.shape[0]):
+                r_coords[i] += centers[i]
+        N.node_table[:[x_ind,y_ind,z_ind]] = r_coords.T
+
+    return N
+
+def Tree_height(N):
     """
     
     """
-    coords=np.vstack([n.get_coords() for n in N_all.neurons])
+    # get ends
+    ends = np.unique(N.get_end_nodes())
+    # get branches
+    branches = np.unique(N.get_branch_nodes())
+    # initialise heights
+    heights = []
+    # for each end:
+    for e in ends:
+        # get path to root
+        path = np.unique(nt.upstream_path(N,start = e))
+        # get number of branches in path
+        heights.append(len(np.intersect1d(path,branches)))
 
-    # lets create an array off coords with the neuron names each point belong to do 
-    l = [[n.name] * n.count_nodes() for n in N_all.neurons]
-    names = np.array([item for sublist in l for item in sublist])
-    original_data = np.c_[names,coords]
-
-    # transpose coords
-    coords = coords.T
-
-    # center
-    for i in range(coords.shape[0]):
-            coords[i] -= np.mean(coords[i])
-
-    r_coords = snap_to_axis(coords)
-
-    # transpose r_coords
-    r_coords = r_coords.T
-
-    # overwrite the original data with the new coordinates
-    original_data[:,1:4] = r_coords
-
-    # update coordinates in Neurons with new data
-
-    x_ind = N_all.neurons[0].labels.index('x')
-    y_ind = N_all.neurons[0].labels.index('y')
-    z_ind = N_all.neurons[0].labels.index('z')
-
-    for i in range(len(N_all.neurons)):
-        n = N_all.neurons[i]
-        current = original_data[np.where(original_data[:,0]==n.name)[0],1:4]
-        n.node_table[:,[x_ind,y_ind,z_ind]] = current
-        N_all.neurons[i] = n
-
-    return N_all
+    # return the maximum value
+    return np.max(heights)

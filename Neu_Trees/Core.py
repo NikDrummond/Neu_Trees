@@ -235,7 +235,7 @@ class Neuron():
         Returns the node ids of branch nodes
         """
         branches = np.where(self.node_table[:,self.labels.index('label')] == 5)[0]
-        return self.node_table[branches,self.labels.index('node_id')]
+        return np.unique(self.node_table[branches,self.labels.index('node_id')])
     
     def count_ends(self):
         """
@@ -248,7 +248,7 @@ class Neuron():
         Returns the node ids of end nodes
         """
         ends = np.where(self.node_table[:,self.labels.index('label')] == 6)[0]
-        return self.node_table[ends,self.labels.index('node_id')]
+        return np.unique(self.node_table[ends,self.labels.index('node_id')])
     
     def count_segments(self):
         """

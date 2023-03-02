@@ -102,40 +102,57 @@ def upstream_path(N,start,stop = -1, return_length = False):
 
     """
 
-    if isinstance(stop, int):
+
+    # some initial steps - 
+    # we will always travel to the root. If however, the root is not in the desired stops, we need to account for this.
+
+    # make sure the start/stop inputs are list
+    if isinstance(stop,int):
         stop = [stop]
 
-    # for indexing...
+    inc_root = True
+    if N.get_root_id() in stop:
+        inc_root = False
+
+    # if stops is a list, starts needs to be removed from it
+    if start in stop:
+        # remove start from stop
+        stop.remove(start)
+
+    # inds
     node_ind = N.labels.index('node_id')
     parent_ind = N.labels.index('parent_id')
 
-    # initialise path and starting node
+    # initialise path
     path = []
+    # starting point
     current = start
 
     while current not in stop:
-
-        if current == -1:
-            print("None of the given stop nodes are in the upstream path of the start node. return NaN")
-            return np.nan
-
-        # add the current node to the path
+        # add current to path ( if first run this is the start node)
         path.append(current)
-
-        # find the current node
-        child = np.where(N.node_table[:, node_ind] == current)[0][0]
-        
-        # get its parent
+        # find current node in node table
+        child = np.where(N.node_table[:,node_ind] ==  current)[0][0]
+        # get it's parent
         parent = N.node_table[child,parent_ind]
+        # if parent is now -1, we have passed the root and can stop
+        if parent == -1:
+            break
+        else:
+            # otherwise update current
+            current = parent
 
-        # update current
-        current = parent
-
-    if return_length == False:
-        return path
+    # if inc_root is False, there was no path.append
+    if inc_root == False:
+        print('The start node has no upstream path to the given end nodes - returning NaN ')
+        return np.nan
+    # otherwise we have the path?
     else:
-        dist = upstream_path_length(N,path)
-        return path, dist
+        if return_length == False:
+            return path
+        else:
+            dist = upstream_path_length(N,path)
+            return path, dist
 
 def upstream_path_length(N,path):
     """
@@ -397,8 +414,9 @@ def Eig_align(N,population = False, keep_center = False):
 
     return N
 
-def Tree_height(N):
+def Tree_height(N, output = 'max'):
     """
+    Get the 
     
     """
     # get ends
@@ -410,9 +428,18 @@ def Tree_height(N):
     # for each end:
     for e in ends:
         # get path to root
-        path = np.unique(nt.upstream_path(N,start = e))
+        path = np.unique(upstream_path(N,start = e))
         # get number of branches in path
         heights.append(len(np.intersect1d(path,branches)))
 
-    # return the maximum value
-    return np.max(heights)
+    # return
+    if output == 'max':
+        return np.max(heights)
+    elif output == 'mean':
+        return np.mean(heights)
+    elif output == 'median':
+        return np.median(heights)
+    elif output == 'gaussian':
+        return [np.mean(heights),np.std(heights)]
+    elif output == 'full':
+        return heights
